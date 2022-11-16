@@ -23,6 +23,7 @@ class Course():
     content = []
     level = 'beginner'
     cover = "" # cover image
+    link = "" # url to first file in course
 
     def __init__(self, name=None, description=None, author=None, 
                  date_created=None, date_published=None, 
@@ -44,11 +45,9 @@ class Course():
         if output_folder: 
             self.output_folder = output_folder
         else:
-            self.output_folder = "web/learn/micropython"
+            self.output_folder = "not_specified"
         if course_folder: self.course_folder = course_folder
         
-        
-
     def read_course(self, course_folder):
         self.course_folder = course_folder
         with open(f'{course_folder}/course.yml', 'r') as stream:
@@ -82,6 +81,35 @@ class Course():
 
     def __str__(self):
         return f'Course name: {self.name}, with {self.no_of_lessons} lessons, layout is: {self.layout}'
+
+    @property
+    def lessons(self)->list:
+        """ return a list of lessons """
+        lesson_list = []
+        for i in self.content:
+            for item in i['section']['content']:
+                lesson_list.append(item)
+        return lesson_list
+    
+    def next_lesson(self, lesson_number):
+        """ return the next lesson """
+        print(f'lesson number is: {lesson_number}, {self.lessons[lesson_number-1]}')
+        if lesson_number < self.no_of_lessons:
+            next = self.lessons[lesson_number].replace('.md', '.html')
+            print(f'next lesson is: {next}')
+            return next
+        else:
+            return None
+
+    def previous_lesson(self, lesson_number):
+        """ return the next lesson """
+        print(f'lesson is:{lesson_number}, {self.lessons[lesson_number-1]}')
+        if lesson_number > 1:
+            previous = self.lessons[lesson_number-2].replace('.md', '.html')
+            print(f'previous lesson is: {previous}')
+            return previous
+        else:
+            return None
 
     @property
     def no_of_lessons(self):
@@ -150,7 +178,7 @@ class Course():
         
         content = {'content':sections}
         nav.append(content)
-        print(f'nav {nav}')
+        # print(f'nav {nav}')
 
         n = yaml.load(json.dumps(nav), Loader=yaml.FullLoader)
         yaml_navigation_structure = yaml.dump(n, sort_keys=False)
@@ -163,7 +191,7 @@ class Course():
         lesson_list = lesson_file.split('---', 2) # splits the string into 3 parts
 
         l = yaml.load(lesson_list[1], Loader=yaml.FullLoader)
-        print(f'l is {l}')
+        # print(f'l is {l}')
 
         # should now have atleast 3 sections
         # 1 is empty
@@ -221,39 +249,40 @@ class Course():
 
         for section in self.content:
             # Each section has a name and a content list of items
-            print(f'section is: {section}')
+            # print(f'section is: {section}')
             just_item = section['section']    
 
             #  for each item in the content section 
             for item in just_item['content']:
+
+                if page_count == 1:
+                    url = item.replace('.md', '.html')
+                    self.link = url
+
                 index = just_item['content'].index(item)
-                item_count = len(just_item['content'])
-                print(f'item is: {item}, index is {index}, total is {item_count}')
+               
+                print(f'item is: {item}, index is {index}, page_count is {page_count}')
            
                 item_percentage = page_percent * page_count
-                page_count += 1
-
-                if index == 0:
-                    # first item
-                    previous = ""
-                    if index < item_count-1:
-                        next = just_item['content'][index+1]
-                    else:
-                        next = ""
-                    
-                if index == item_count-1:
-                    # last item
-                    next = ""
-                    previous = ""
-                    if item_count > 0:
-                        previous = just_item['content'][index-1]
-                    
+                
+                # set the previous and next links
+                next = self.next_lesson(page_count)
+                previous = self.previous_lesson(page_count)
+                
+                # increment if it's a page
+                if item in self.lessons and page_count < self.no_of_lessons: 
+                    page_count += 1
+                    print(f'page is: {item}, page_count is {page_count}')
+                   
                 front_matter = f'---' + "\n"
                 front_matter += f'layout: {self.layout}' + "\n"
                 front_matter += f'title: {item}' + "\n"
+                front_matter += f'author: {self.author}' + "\n"
                 front_matter += f'type: {self.type}' + "\n"
-                front_matter += f'previous: {previous}' + "\n"
-                front_matter += f'next: {next}' + "\n"
+                if previous is not None:
+                    front_matter += f'previous: {previous}' + "\n"
+                if next is not None:
+                    front_matter += f'next: {next}' + "\n"
                 front_matter += f'description: {self.description}' + "\n"
                 front_matter += f'percent: {item_percentage}' + "\n"
                 front_matter += f'---' + "\n"
@@ -266,10 +295,10 @@ class Course():
                     # print(f'lines is: {lines}')
                 page = self.update_front_matter(lesson_file=lines, front_matter=front_matter)
 
-                print(f'{page}')
+                # print(f'{page}')
 
                 # write the file
-                print(f'writing file: {self.output_folder}/{item}')
+                # print(f'writing file: {self.output_folder}/{item}')
                 with open(f'{self.output_folder}/{item}', 'w') as build_file:
                     build_file.writelines(page)
                     
@@ -278,7 +307,11 @@ class Course():
         
     def __str__(self):
         """ provide a list of information for to build the courses.yml data file """
-        return {'description':self.description, 'name':self.name, 'cover':self.cover}
+
+        cover_path = self.output_folder.replace('web','') + "/" + self.cover
+        link_path = self.output_folder.replace('web','') + "/" + self.link
+        
+        return {'description':self.description, 'name':self.name, 'cover':cover_path, 'link':link_path}  
 
 
 class Courses():
@@ -321,5 +354,3 @@ class Courses():
         for course in self.course_list:
             course.build()
     
-    
-        
