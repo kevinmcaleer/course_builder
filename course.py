@@ -4,7 +4,8 @@
 
 import os
 import yaml
-import ast
+import json
+from shutil import copytree as copy, rmtree as rmdir
 
 class Course():
     name = ""
@@ -21,6 +22,7 @@ class Course():
     course_folder = ""
     content = []
     level = 'beginner'
+    cover = "" # cover image
 
     def __init__(self, name=None, description=None, author=None, 
                  date_created=None, date_published=None, 
@@ -63,7 +65,8 @@ class Course():
         self.date_created = course['date_created']
         self.date_published = course['date_published']
         self.content = course['content']
-        print(course['content'])
+        self.cover = course['cover']
+        # print(course['content'])
         print(f'found {self.no_of_lessons} lessons')
         return self
 
@@ -97,6 +100,63 @@ class Course():
             n -= 1
         return start
 
+    def build_navigation(self):
+        """ Build the navigation front matter """
+        # output is a nice YML structure with friendly names for each section, with a link to that page
+
+        # for this course, go through each section
+            # for each section, go through each item
+                # for each item open the file and read the name, append it to the dictionary
+
+        with open(f'{self.course_folder}/course.yml', 'r') as stream:
+            try:
+                course=yaml.safe_load(stream)
+                print(f'Course manifest loaded')
+            except yaml.YAMLError as exc:
+                print(exc)
+        
+        course = course[0]
+
+        nav = []
+        sections = []
+
+        details = {'name':course['name']}
+        nav.append(details)
+        # print(f"course is {course['content']}")
+        for section in course['content']:
+            name = section['section']
+            print(f"Name is: {name['name']}")
+            
+            item_record = []
+            for item in section['section']['content']:
+                print(item)
+
+                # open the file and read the name
+                
+                with open(f'{self.course_folder}/{item}', 'r') as stream:
+                    try:
+                        file_content = stream.read()
+                        a = file_content.split("---")[1]
+                        lesson=yaml.safe_load(a)
+                    except yaml.YAMLError as exc:
+                        print(exc)
+                    # print('lesson is: ', lesson['title'])
+                item = item.replace('.md', '.html')
+                # print(f'item is (should have .md replaced by .html): {item}')
+                record = {'name': lesson['title'], 'link': item}
+                # print(f'record is: {record}')
+                item_record.append(record)
+            sections.append({'section':name['name'], 'content':item_record})
+        
+        content = {'content':sections}
+        nav.append(content)
+        print(f'nav {nav}')
+
+        n = yaml.load(json.dumps(nav), Loader=yaml.FullLoader)
+        yaml_navigation_structure = yaml.dump(n, sort_keys=False)
+
+        return yaml_navigation_structure
+
     def update_front_matter(self, lesson_file, front_matter):
         
         # read the lesson file, find the front matter makers and remove them
@@ -114,17 +174,29 @@ class Course():
         
         front_matter_list = front_matter.split('---', 2) # splits the string into 3 parts
         f = yaml.load(front_matter_list[1], Loader=yaml.FullLoader)
-        print(f'f is: {f}')
+        # print(f'f is: {f}')
 
         # merge the existing front matter with the new front matter
+
+         # get navigation front matter
+        nav = self.build_navigation()
 
         merged_frontmatter = f
         merged_frontmatter.update(l)
 
         merged_frontmatter = yaml.dump(merged_frontmatter, sort_keys=False)
 
-        page = "---\n" + merged_frontmatter + "---\n" + content
+        page = "---\n" + merged_frontmatter + "navigation:\n" + nav +  "---\n" + content
         return page
+
+    def copy_assets(self):
+        """ copy the assets folder to the output folder """
+
+        # check if the assets folder exists and remove it
+        if os.path.exists(f'{self.output_folder}/assets'):
+            rmdir(f'{self.output_folder}/assets')
+            
+        copy(self.course_folder + '/assets', self.output_folder + '/assets')
 
     def build(self):
         """ Build the front matter for each content page, and output to the build folder """
@@ -133,13 +205,24 @@ class Course():
         self.create_output(self.output_folder)
         lesson = ""
         lesson += "<nav>" + "\n"
+
+        # work out how much each page is as a percentage
+        if self.no_of_lessons > 0:
+            page_percent = 100 // self.no_of_lessons
+        else:
+            page_percent = 100
+
         if len(self.content) == 0:
             print("no content found")
             return
+
+        # reset page_count
+        page_count = 1
+
         for section in self.content:
             # Each section has a name and a content list of items
             print(f'section is: {section}')
-            just_item = section['section']
+            just_item = section['section']    
 
             #  for each item in the content section 
             for item in just_item['content']:
@@ -147,6 +230,9 @@ class Course():
                 item_count = len(just_item['content'])
                 print(f'item is: {item}, index is {index}, total is {item_count}')
            
+                item_percentage = page_percent * page_count
+                page_count += 1
+
                 if index == 0:
                     # first item
                     previous = ""
@@ -162,39 +248,41 @@ class Course():
                     if item_count > 0:
                         previous = just_item['content'][index-1]
                     
-                
-                    front_matter = f'---' + "\n"
-                    front_matter += f'layout: {self.layout}' + "\n"
-                    front_matter += f'title: {item}' + "\n"
-                    front_matter += f'type: {self.type}' + "\n"
-                    front_matter += f'previous: {previous}' + "\n"
-                    front_matter += f'next: {next}' + "\n"
-                    front_matter += f'description: {self.description}' + "\n"
-                    front_matter += f'---' + "\n"
-                
-                    # update front matter
-                    lesson_file = f'{self.course_folder}/{item}'
-                    with open(lesson_file, 'r') as f:
-                        print(f'reading {lesson_file}')
-                        lines = f.read()
-                        # print(f'lines is: {lines}')
-                    page = self.update_front_matter(lesson_file=lines, front_matter=front_matter)
+                front_matter = f'---' + "\n"
+                front_matter += f'layout: {self.layout}' + "\n"
+                front_matter += f'title: {item}' + "\n"
+                front_matter += f'type: {self.type}' + "\n"
+                front_matter += f'previous: {previous}' + "\n"
+                front_matter += f'next: {next}' + "\n"
+                front_matter += f'description: {self.description}' + "\n"
+                front_matter += f'percent: {item_percentage}' + "\n"
+                front_matter += f'---' + "\n"
+            
+                # update front matter
+                lesson_file = f'{self.course_folder}/{item}'
+                with open(lesson_file, 'r') as f:
+                    print(f'reading {lesson_file}')
+                    lines = f.read()
+                    # print(f'lines is: {lines}')
+                page = self.update_front_matter(lesson_file=lines, front_matter=front_matter)
 
-                    print(f'{page}')
+                print(f'{page}')
 
-                    # write the file
-                    print(f'writing file: {self.output_folder}/{item}')
-                    with open(f'{self.output_folder}/{item}', 'w') as build_file:
-                        build_file.writelines(page)
+                # write the file
+                print(f'writing file: {self.output_folder}/{item}')
+                with open(f'{self.output_folder}/{item}', 'w') as build_file:
+                    build_file.writelines(page)
                     
+        self.copy_assets() # copy the assets folder to the output folder
         return lesson
+        
     def __str__(self):
         """ provide a list of information for to build the courses.yml data file """
-        return {'description':self.description,'name':self.name}
+        return {'description':self.description, 'name':self.name, 'cover':self.cover}
 
 
 class Courses():
-    course_list = [Course()]
+    course_list = []
 
     def __init__(self, data=None):
         if data: self.course_list = data
@@ -231,3 +319,5 @@ class Courses():
         for course in self.course_list:
             course.build()
     
+    
+        

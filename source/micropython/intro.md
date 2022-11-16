@@ -1,6 +1,6 @@
 ---
 layout: lesson
-title: intro.md
+title: Introduction
 type: page
 description: Get started with MicroPython, What Python is, where to download it and which software to use to develop MicroPython code.
 ---

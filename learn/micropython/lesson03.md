@@ -5,6 +5,22 @@ type: page
 previous: lesson02.md
 next: null
 description: It's designed to be easy to read and write, perfect for beginners
+percent: 100
+navigation:
+- name: Learn MicroPython
+- content:
+  - section: Overview
+    content:
+    - name: Introduction
+      link: intro.html
+  - section: Introduction
+    content:
+    - name: Why is it called Python?
+      link: lesson01.html
+    - name: Where to get MicroPython
+      link: lesson02.html
+    - name: Why use MicroPython?
+      link: lesson03.html
 ---
 
 
