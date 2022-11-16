@@ -10,6 +10,6 @@ import os
 
 courses = Courses()
 courses.read_courses('source')
-print(courses.output_yml('data'))
+print(courses.output_yml('_data'))
 
 courses.build()

@@ -6,6 +6,7 @@ description: Get started with MicroPython, What Python is, where to download it 
 ---
 
 ## Course Content
+
 In this course you will learn:
 
 * What MicroPython is, where to download it and which software to use to develop Python code

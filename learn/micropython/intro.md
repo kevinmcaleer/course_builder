@@ -26,6 +26,7 @@ navigation:
 
 
 ## Course Content
+
 In this course you will learn:
 
 * What MicroPython is, where to download it and which software to use to develop Python code

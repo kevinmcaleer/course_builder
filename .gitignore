@@ -1,2 +1,7 @@
 .DS_Store
 venv
+_data
+learn
+learn/micropython
+/.pyc
+__pycache__
