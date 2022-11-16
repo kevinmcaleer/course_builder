@@ -18,7 +18,7 @@ class Course():
     type = "page"
     links = []
     output = ""
-    output_folder = "build"
+    output_folder = "web/build"
     course_folder = ""
     content = []
     level = 'beginner'
@@ -44,7 +44,7 @@ class Course():
         if output_folder: 
             self.output_folder = output_folder
         else:
-            self.output_folder = "learn/micropython"
+            self.output_folder = "web/learn/micropython"
         if course_folder: self.course_folder = course_folder
         
         
@@ -283,6 +283,7 @@ class Course():
 
 class Courses():
     course_list = []
+    output_folder = "web/learn"
 
     def __init__(self, data=None):
         if data: self.course_list = data
@@ -295,6 +296,7 @@ class Courses():
             if os.path.isdir(os.path.join(course_folder, course)):
                 print(f'Found course: {course}')
                 new_course.read_course(os.path.join(course_folder, course))
+                new_course.output_folder = os.path.join(self.output_folder,course)
                 self.course_list.append(new_course)
         return self
 

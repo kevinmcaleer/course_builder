@@ -10,6 +10,7 @@ import os
 
 courses = Courses()
 courses.read_courses('source')
-print(courses.output_yml('_data'))
+courses.output_folder = 'web/learn'
+print(courses.output_yml('web/_data'))
 
 courses.build()
