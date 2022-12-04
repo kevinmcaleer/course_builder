@@ -1,5 +1,5 @@
 import yaml
-from course import Course, Courses
+from course_builder.course import Course, Courses
 import os
 import json
 
